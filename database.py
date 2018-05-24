@@ -93,6 +93,16 @@ class Message(Base):
         return "<Message from %s at %s>" % (
             self.person, self.date.strftime("%m/%d/%y %H:%m"))
 
+    def to_dict(self) -> dict:
+        return {
+            'person': self.person,
+            'message': self.message,
+            'date': self.date,
+            'attachment': self.attachment,
+            'attach_is_file': self.attach_is_file,
+            'attachment_name': self.attachment_name,
+        }
+
 
 if __name__ == "__main__":
     if os.path.exists('messages.db'):

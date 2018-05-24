@@ -1,6 +1,7 @@
 ### Custom ###
 *.db
 data/
+.idea/
 .pyre/
 .vscode/
 # Created by https://www.gitignore.io/api/pycharm,python,sublimetext

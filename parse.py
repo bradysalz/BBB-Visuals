@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from datetime import datetime
 import json
@@ -27,7 +27,7 @@ class MessageParser:
             logging.getLogger().setLevel(logging.INFO)
 
     def soupify_html(self, fname: str):
-        """Reads an HTML file and turns it into a bs4 object"""
+        """Read an HTML file and turns it into a bs4 object."""
         if not fname.endswith('html'):
             raise ValueError(
                 "Expected an HTML file, don't give me anything fancy")
@@ -43,7 +43,7 @@ class MessageParser:
         self.soup = soup.body
 
     def parse_all_messages(self):
-        """Parses and adds all messages to a list"""
+        """Parse and add all messages to a list."""
         # For those wanting to follow along their own HTML tree, the tags are:
         # viewport, page, acw, messageGroup
         msg_groups = self.soup.contents[1] \
@@ -59,7 +59,7 @@ class MessageParser:
                     self.msg_list.append(message)
 
     def _parse_message(self, message: BeautifulSoup) -> Optional[Message]:
-        """Reads and converts HTML data into a Message"""
+        """Read and converts HTML data into a Message."""
         try:
             attrs = json.loads(message['data-store'])
         except KeyError:
@@ -79,7 +79,7 @@ class MessageParser:
         return new_msg
 
     def _parse_msg_with_attach(self, message: BeautifulSoup) -> Message:
-        """Turns image and link attachment post to Messages"""
+        """Turn image and link attachment posts to Messages."""
         attrs = json.loads(message['data-store'])
         name = attrs['name']
 
@@ -107,7 +107,7 @@ class MessageParser:
 
     def _parse_admin_message(self,
                              message: BeautifulSoup) -> Optional[Message]:
-        """Reads an 'admin' message and converts to a Message
+        """Read an 'admin' message and converts to a Message.
 
         An 'admin' message is one which is sent by Facebook instead of a user.
         A typical example is 'PersonX added PersonY to the chat'
@@ -120,12 +120,33 @@ class MessageParser:
 
         return Message('Admin', data.text, self._prev_msg.date)
 
+    def anonymize_people(self, fname: str = 'user-mapping.log'):
+        """Change all names from 'real names' to 'User N'.
+
+        Args:
+            fname: file which stores the public<->anon user mapping
+        """
+        names = set([msg.person for msg in self.msg_list])
+        t0p_s3cr3t_names = ['User %d' % d for d in range(len(names))]
+
+        name_map = dict(zip(names, t0p_s3cr3t_names))
+
+        # Save name map to file
+        with open(fname, 'w') as f:
+            f.write("Real Name, Fake Name\n")
+            for real, fake in name_map.items():
+                f.write(real + ', ' + fake + '\n')
+
+        # Update names
+        for msg in self.msg_list:
+            msg.person = name_map[msg.person]
+
     @staticmethod
     def _conv_datetime(date: Union[int, float]) -> datetime:
-        """Turns ints/floats to datetime objects"""
+        """Turn ints/floats to datetime objects."""
         date = float(date)
         if date > (1e12 - 1):
-            # not sure if msec or sec
+            # not sure if msec or sec timestamps?
             date = date / 1e3
         return datetime.fromtimestamp(date)
 
@@ -134,6 +155,7 @@ if __name__ == "__main__":
     mp = MessageParser(debug=True)
     mp.soupify_html(FNAME)
     mp.parse_all_messages()
+    mp.anonymize_people()
 
     dm = DatabaseManager()
     session = dm.open_session()
